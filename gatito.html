@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>¡Buenos días, amor!</title>
+  <style>
+    /* ==========================
+       ESTILOS GLOBALES
+    ========================== */
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    /* Fondo dinámico: Canvas a pantalla completa */
+    #bgCanvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: 0;
+    }
+    /* Mensajes motivadores flotantes */
+    #motivationContainer {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 1;
+    }
+    .motivation {
+      position: absolute;
+      font-size: 2rem;
+      color: rgba(255, 255, 255, 0.2);
+      animation: drift 15s linear infinite;
+    }
+    @keyframes drift {
+      0% { transform: translate(0, 0); }
+      50% { transform: translate(10px, -10px); }
+      100% { transform: translate(0, 0); }
+    }
+    /* --------------------------
+       Pantalla de Bienvenida (Welcome Screen)
+    --------------------------- */
+    #welcomeScreen {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      /* Fondo vibrante semitransparente para que se vea el efecto dinámico de fondo */
+      background: linear-gradient(135deg, rgba(255,154,158,0.9), rgba(250,208,196,0.9));
+      padding: 30px;
+      border-radius: 10px;
+      text-align: center;
+      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+      z-index: 5;
+      width: 90%;
+      max-width: 400px;
+    }
+    #welcomeScreen h1 {
+      color: #ff5f6d;
+      font-size: 2.5rem;
+      margin-bottom: 10px;
+    }
+    #welcomeScreen p {
+      font-size: 1.2rem;
+      color: #333;
+      margin: 10px 0;
+    }
+    #yesNoContainer {
+      margin: 20px 0;
+    }
+    #yesNoContainer button {
+      padding: 10px 20px;
+      font-size: 1rem;
+      margin: 0 10px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: transform 0.3s ease;
+    }
+    #yesButton {
+      background: #ff5f6d;
+      color: #fff;
+    }
+    #noButton {
+      background: #ccc;
+      color: #333;
+    }
+    #continueButton {
+      padding: 10px 20px;
+      font-size: 1.1rem;
+      background: #28a745;
+      color: #fff;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      display: none;
+      margin-top: 20px;
+    }
+    #messageArea p {
+      font-size: 1.2rem;
+      color: #28a745;
+      margin-top: 10px;
+    }
+    /* --------------------------
+       Pantalla del Juego
+    --------------------------- */
+    #snakeScreen {
+      display: none;
+      position: relative;
+      width: 100%;
+      height: 100%;
+      background: #333;
+      z-index: 4;
+    }
+    /* Área de juego (canvas de 400x400px, centrado) */
+    #snakeCanvas {
+      background: #222;
+      width: 400px;
+      height: 400px;
+      display: block;
+      margin: 20px auto;
+      border: 2px solid #fff;
+    }
+    #scoreDisplay {
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 1.5rem;
+      color: #fff;
+      text-shadow: 1px 1px 3px #000;
+    }
+    /* Overlay de Game Over (aparece solo al perder) */
+    #gameOverOverlay {
+      display: none;
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.7);
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 6;
+    }
+    #gameOverOverlay h1 {
+      font-size: 3rem;
+      margin: 0;
+    }
+    #gameOverOverlay p {
+      font-size: 1.5rem;
+      margin: 10px 0 20px;
+    }
+    #restartButton {
+      padding: 10px 20px;
+      font-size: 1.1rem;
+      background: #ff5f6d;
+      color: #fff;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <!-- Fondo dinámico (canvas) -->
+  <canvas id="bgCanvas"></canvas>
+  
+  <!-- Mensajes motivadores flotantes -->
+  <div id="motivationContainer">
+    <div class="motivation" style="top: 10%; left: 5%;">¡Tú puedes!</div>
+    <div class="motivation" style="top: 40%; left: 80%;">Eres increíble</div>
+    <div class="motivation" style="top: 70%; left: 20%;">Te amo</div>
+    <div class="motivation" style="top: 30%; left: 50%;">Confío en ti</div>
+    <div class="motivation" style="top: 80%; left: 60%;">Hoy es tu día</div>
+  </div>
+  
+  <!-- Pantalla de Bienvenida -->
+  <div id="welcomeScreen">
+    <h1>¡Buenos días, amor!</h1>
+    <p>¿Estás lista para mañana?</p>
+    <div id="yesNoContainer">
+      <button id="yesButton">Sí</button>
+      <button id="noButton">No</button>
+    </div>
+    <div id="messageArea"></div>
+    <button id="continueButton">¡Vamos a jugar!</button>
+  </div>
+  
+  <!-- Pantalla del Juego -->
+  <div id="snakeScreen">
+    <canvas id="snakeCanvas"></canvas>
+    <div id="scoreDisplay">Puntuación: 0</div>
+    <div id="gameOverOverlay">
+      <h1>¡Game Over!</h1>
+      <p id="finalScore"></p>
+      <button id="restartButton">Volver a inicio</button>
+    </div>
+  </div>
+  
+  <script>
+    /* =====================================================
+       Fondo dinámico: Efecto de degradado y highlight al mover el cursor
+    ===================================================== */
+    const bgCanvas = document.getElementById("bgCanvas");
+    const bgCtx = bgCanvas.getContext("2d");
+    let lastX = window.innerWidth / 2, lastY = window.innerHeight / 2;
+    
+    function resizeBgCanvas() {
+      bgCanvas.width = window.innerWidth;
+      bgCanvas.height = window.innerHeight;
+      // Redibuja el fondo en la posición actual del cursor
+      drawBgEffect(lastX, lastY);
+    }
+    window.addEventListener("resize", resizeBgCanvas);
+    
+    function drawBgEffect(x, y) {
+      lastX = x;
+      lastY = y;
+      // Fondo degradado
+      const grad = bgCtx.createLinearGradient(0, 0, bgCanvas.width, bgCanvas.height);
+      grad.addColorStop(0, "#74ebd5");
+      grad.addColorStop(1, "#acb6e5");
+      bgCtx.fillStyle = grad;
+      bgCtx.fillRect(0, 0, bgCanvas.width, bgCanvas.height);
+      
+      // Highlight: círculo radial que ilumina la zona donde está el cursor
+      const radius = 150;
+      const radialGrad = bgCtx.createRadialGradient(x, y, 0, x, y, radius);
+      radialGrad.addColorStop(0, "rgba(255,255,255,0.8)");
+      radialGrad.addColorStop(1, "rgba(255,255,255,0)");
+      bgCtx.fillStyle = radialGrad;
+      bgCtx.beginPath();
+      bgCtx.arc(x, y, radius, 0, 2 * Math.PI);
+      bgCtx.fill();
+    }
+    
+    // Inicializa el fondo en el centro
+    resizeBgCanvas();
+    drawBgEffect(lastX, lastY);
+    // Actualiza el efecto dinámico en cada movimiento del cursor
+    document.addEventListener("mousemove", function(e) {
+      drawBgEffect(e.clientX, e.clientY);
+    });
+    
+    /* =====================================================
+       Lógica de la Pantalla de Bienvenida
+    ===================================================== */
+    let noClickCount = 0;
+    const yesButton = document.getElementById("yesButton");
+    const noButton = document.getElementById("noButton");
+    const messageArea = document.getElementById("messageArea");
+    const continueButton = document.getElementById("continueButton");
+    const welcomeScreen = document.getElementById("welcomeScreen");
+    const snakeScreen = document.getElementById("snakeScreen");
+    const motivationContainer = document.getElementById("motivationContainer");
+    
+    yesButton.addEventListener("click", function() {
+      messageArea.innerHTML = "<p>¡Sabía que estarías lista! Mañana te espera algo maravilloso.</p>";
+      continueButton.style.display = "inline-block";
+    });
+    
+    noButton.addEventListener("click", function() {
+      noClickCount++;
+      // El botón "Sí" crece y el "No" se encoge
+      yesButton.style.transform = "scale(" + (1 + 0.1 * noClickCount) + ")";
+      noButton.style.transform = "scale(" + (1 - 0.1 * noClickCount) + ")";
+      if (noClickCount >= 5) {
+        messageArea.innerHTML = "<p>¡Siempre estás lista, amor!</p>";
+        continueButton.style.display = "inline-block";
+      }
+    });
+    
+    continueButton.addEventListener("click", function() {
+      // Oculta la pantalla de bienvenida y sus elementos (incluido el fondo motivador)
+      welcomeScreen.style.display = "none";
+      motivationContainer.style.display = "none";
+      snakeScreen.style.display = "block";
+      startCatGame();
+    });
+    
+    /* =====================================================
+       Lógica del Juego (Gato en modo “Snake” modificado)
+       - Área de juego: canvas de 400x400px
+       - El gato (pixel art) crece su cuadrado (su lado) al comer
+    ===================================================== */
+    const canvas = document.getElementById("snakeCanvas");
+    const ctx = canvas.getContext("2d");
+    const scoreDisplay = document.getElementById("scoreDisplay");
+    const gameOverOverlay = document.getElementById("gameOverOverlay");
+    const finalScoreDisplay = document.getElementById("finalScore");
+    const restartButton = document.getElementById("restartButton");
+    
+    const blockSize = 20;
+    const canvasWidth = 400;
+    const canvasHeight = 400;
+    const columns = canvasWidth / blockSize; // 20 columnas
+    const rows = canvasHeight / blockSize;   // 20 filas
+    
+    let cat;        // Objeto { x, y, size } en celdas
+    let food;       // Objeto { x, y } en celdas
+    let direction;  // Objeto { x, y }
+    let nextDirection;
+    let gameInterval;
+    let score;
+    
+    function startCatGame() {
+      // Asegura que el overlay de Game Over esté oculto
+      gameOverOverlay.style.display = "none";
+      // Configura el canvas
+      canvas.width = canvasWidth;
+      canvas.height = canvasHeight;
+      // Inicializa el gato en el centro con tamaño 1 (1 celda)
+      cat = {
+        x: Math.floor(columns / 2),
+        y: Math.floor(rows / 2),
+        size: 1
+      };
+      direction = { x: 1, y: 0 };
+      nextDirection = { x: 1, y: 0 };
+      score = 0;
+      scoreDisplay.innerHTML = "Puntuación: " + score;
+      placeFood();
+      document.addEventListener("keydown", changeDirection);
+      // Inicia el bucle del juego (200 ms por frame)
+      gameInterval = setInterval(gameLoop, 200);
+    }
+    
+    function gameLoop() {
+      // Actualiza la dirección
+      direction = nextDirection;
+      // Mueve el gato (posición en celdas)
+      cat.x += direction.x;
+      cat.y += direction.y;
+      // Verifica colisión con los bordes (asegura que el cuadrado del gato esté dentro)
+      if (cat.x < 0 || cat.y < 0 || (cat.x + cat.size) > columns || (cat.y + cat.size) > rows) {
+        gameOver();
+        return;
+      }
+      // Si el ratón (food) se encuentra en alguna parte del área del gato, se "come"
+      if (food.x >= cat.x && food.x < (cat.x + cat.size) &&
+          food.y >= cat.y && food.y < (cat.y + cat.size)) {
+        score++;
+        scoreDisplay.innerHTML = "Puntuación: " + score;
+        cat.size++;  // El gato crece uniformemente (su cuadrado aumenta)
+        placeFood();
+      }
+      drawGame();
+    }
+    
+    function changeDirection(e) {
+      switch (e.keyCode) {
+        case 37: // Izquierda
+          if (direction.x === 1) break;
+          nextDirection = { x: -1, y: 0 };
+          break;
+        case 38: // Arriba
+          if (direction.y === 1) break;
+          nextDirection = { x: 0, y: -1 };
+          break;
+        case 39: // Derecha
+          if (direction.x === -1) break;
+          nextDirection = { x: 1, y: 0 };
+          break;
+        case 40: // Abajo
+          if (direction.y === -1) break;
+          nextDirection = { x: 0, y: 1 };
+          break;
+      }
+    }
+    
+    function drawGame() {
+      // Fondo del canvas
+      ctx.fillStyle = "#222";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      
+      // Dibuja el ratón con efecto de highlight (iluminación)
+      ctx.save();
+      ctx.shadowBlur = 20;
+      ctx.shadowColor = "rgba(255,255,0,0.8)";
+      drawMouse(food.x * blockSize, food.y * blockSize, blockSize);
+      ctx.restore();
+      
+      // Dibuja al gato (su "cabeza" en pixel art, cuyo tamaño es cat.size * blockSize)
+      drawCat(cat.x * blockSize, cat.y * blockSize, cat.size * blockSize);
+    }
+    
+    // Función para dibujar el gato en pixel art
+    function drawCat(x, y, size) {
+      ctx.save();
+      ctx.imageSmoothingEnabled = false;
+      // Cabeza: cuadrado naranja
+      ctx.fillStyle = "#FFA500";
+      ctx.fillRect(x, y, size, size);
+      // Orejas en rosa
+      ctx.fillStyle = "#FFC0CB";
+      // Oreja izquierda
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(x + size * 0.3, y);
+      ctx.lineTo(x + size * 0.15, y - size * 0.3);
+      ctx.closePath();
+      ctx.fill();
+      // Oreja derecha
+      ctx.beginPath();
+      ctx.moveTo(x + size, y);
+      ctx.lineTo(x + size - size * 0.3, y);
+      ctx.lineTo(x + size - size * 0.15, y - size * 0.3);
+      ctx.closePath();
+      ctx.fill();
+      // Ojos: cuadrados negros
+      ctx.fillStyle = "#000";
+      ctx.fillRect(x + size * 0.25, y + size * 0.35, size * 0.1, size * 0.1);
+      ctx.fillRect(x + size * 0.65, y + size * 0.35, size * 0.1, size * 0.1);
+      // Nariz: cuadradito en rosa fuerte
+      ctx.fillStyle = "#FF69B4";
+      ctx.fillRect(x + size * 0.45, y + size * 0.55, size * 0.1, size * 0.1);
+      ctx.restore();
+    }
+    
+    // Función para dibujar el ratón en pixel art
+    function drawMouse(x, y, size) {
+      ctx.save();
+      ctx.imageSmoothingEnabled = false;
+      // Cuerpo: círculo gris
+      ctx.fillStyle = "#808080";
+      ctx.beginPath();
+      ctx.arc(x + size / 2, y + size / 2, size / 2, 0, 2 * Math.PI);
+      ctx.fill();
+      // Orejas: círculos en gris claro
+      ctx.fillStyle = "#d3d3d3";
+      ctx.beginPath();
+      ctx.arc(x + size * 0.3, y + size * 0.3, size * 0.2, 0, 2 * Math.PI);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(x + size * 0.7, y + size * 0.3, size * 0.2, 0, 2 * Math.PI);
+      ctx.fill();
+      ctx.restore();
+    }
+    
+    function placeFood() {
+      let valid = false, fx, fy;
+      while (!valid) {
+        fx = Math.floor(Math.random() * columns);
+        fy = Math.floor(Math.random() * rows);
+        // Asegura que el ratón no aparezca dentro del área actual del gato
+        if (fx < cat.x || fx >= cat.x + cat.size ||
+            fy < cat.y || fy >= cat.y + cat.size) {
+          valid = true;
+        }
+      }
+      food = { x: fx, y: fy };
+    }
+    
+    function gameOver() {
+      clearInterval(gameInterval);
+      document.removeEventListener("keydown", changeDirection);
+      finalScoreDisplay.innerHTML = "Puntuación final: " + score;
+      // Muestra el overlay de Game Over (solo al perder)
+      gameOverOverlay.style.display = "flex";
+    }
+    
+    restartButton.addEventListener("click", function() {
+      // Regresa al inicio: oculta el juego y vuelve a mostrar la bienvenida y los mensajes motivadores
+      gameOverOverlay.style.display = "none";
+      snakeScreen.style.display = "none";
+      welcomeScreen.style.display = "block";
+      motivationContainer.style.display = "block";
+      noClickCount = 0;
+      yesButton.style.transform = "scale(1)";
+      noButton.style.transform = "scale(1)";
+      messageArea.innerHTML = "";
+      continueButton.style.display = "none";
+    });
+  </script>
+</body>
+</html>
