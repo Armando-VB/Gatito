@@ -54,7 +54,6 @@
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      /* Fondo vibrante semitransparente para que se vea el efecto dinámico de fondo */
       background: linear-gradient(135deg, rgba(255,154,158,0.9), rgba(250,208,196,0.9));
       padding: 30px;
       border-radius: 10px;
@@ -129,6 +128,7 @@
       display: block;
       margin: 20px auto;
       border: 2px solid #fff;
+      touch-action: none;  /* Evita comportamientos por defecto en móviles */
     }
     #scoreDisplay {
       position: absolute;
@@ -182,7 +182,7 @@
   <div id="motivationContainer">
     <div class="motivation" style="top: 10%; left: 5%;">¡Tú puedes!</div>
     <div class="motivation" style="top: 40%; left: 80%;">Eres increíble</div>
-    <div class="motivation" style="top: 70%; left: 20%;">Te amo</div>
+    <div class="motivation" style="top: 70%; left: 20%;">Brilla siempre</div>
     <div class="motivation" style="top: 30%; left: 50%;">Confío en ti</div>
     <div class="motivation" style="top: 80%; left: 60%;">Hoy es tu día</div>
   </div>
@@ -294,7 +294,7 @@
     /* =====================================================
        Lógica del Juego (Gato en modo “Snake” modificado)
        - Área de juego: canvas de 400x400px
-       - El gato (pixel art) crece su cuadrado (su lado) al comer
+       - El gato (pixel art) crece uniformemente al comer
     ===================================================== */
     const canvas = document.getElementById("snakeCanvas");
     const ctx = canvas.getContext("2d");
@@ -316,6 +316,12 @@
     let gameInterval;
     let score;
     
+    // Variables para el control táctil
+    let touchstartX = 0;
+    let touchstartY = 0;
+    let touchendX = 0;
+    let touchendY = 0;
+    
     function startCatGame() {
       // Asegura que el overlay de Game Over esté oculto
       gameOverOverlay.style.display = "none";
@@ -333,7 +339,11 @@
       score = 0;
       scoreDisplay.innerHTML = "Puntuación: " + score;
       placeFood();
+      // Escucha el teclado para control en computadora
       document.addEventListener("keydown", changeDirection);
+      // Escucha gestos táctiles para control en móviles
+      canvas.addEventListener('touchstart', handleTouchStart, false);
+      canvas.addEventListener('touchend', handleTouchEnd, false);
       // Inicia el bucle del juego (200 ms por frame)
       gameInterval = setInterval(gameLoop, 200);
     }
@@ -380,6 +390,45 @@
           break;
       }
     }
+    
+    // --- Funciones para el manejo de toques (swipe) ---
+    function handleTouchStart(e) {
+      e.preventDefault();
+      touchstartX = e.changedTouches[0].screenX;
+      touchstartY = e.changedTouches[0].screenY;
+    }
+    
+    function handleTouchEnd(e) {
+      e.preventDefault();
+      touchendX = e.changedTouches[0].screenX;
+      touchendY = e.changedTouches[0].screenY;
+      handleGesture();
+    }
+    
+    function handleGesture() {
+      let deltaX = touchendX - touchstartX;
+      let deltaY = touchendY - touchstartY;
+      if (Math.abs(deltaX) > Math.abs(deltaY)) {
+        // Swipe horizontal
+        if (deltaX > 0) {
+          // Swipe a la derecha
+          if (direction.x !== -1) nextDirection = { x: 1, y: 0 };
+        } else {
+          // Swipe a la izquierda
+          if (direction.x !== 1) nextDirection = { x: -1, y: 0 };
+        }
+      } else {
+        // Swipe vertical
+        if (deltaY > 0) {
+          // Swipe hacia abajo
+          if (direction.y !== -1) nextDirection = { x: 0, y: 1 };
+        } else {
+          // Swipe hacia arriba
+          if (direction.y !== 1) nextDirection = { x: 0, y: -1 };
+        }
+      }
+    }
+    // --- Fin de la sección táctil ---
     
     function drawGame() {
       // Fondo del canvas
